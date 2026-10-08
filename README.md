@@ -12,7 +12,7 @@ Original: https://peek.doan-labs.com/
 
 ## Why this port?
 
-The original Peek is a React component. That's fine for React apps, but many sites (like static Astro sites) don't use React. Pulling in React (~40KB runtime) just to render avatars defeats the purpose of a lightweight static site.
+The original Peek is a React component. That's fine for React apps, but many sites (like static Astro sites) don't use React — and adding react + react-dom plus a JSX build step just to render avatars is framework overhead for what is really a pure function: name in, SVG out. (Tellingly, the original's own animation loop already bypasses React entirely — "React never hears about a frame.")
 
 This port:
 - **Zero dependencies** — pure JS, no React, no build step
