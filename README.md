@@ -17,7 +17,8 @@ The original Peek is a React component. That's fine for React apps, but many sit
 This port:
 - **Zero dependencies** — pure JS, no React, no build step
 - **Same output** — byte-identical SVGs to the original for the same inputs
-- **Drop-in** — `import { toSvg } from 'peek-vanilla'` works in any JS environment
+- **Same animation** — the full animation rig (springs, blinks, saccades, breathing, per-expression choreography) ported 1:1; the original's own animation code never touched React in the first place
+- **Drop-in** — `import { toSvg, mount } from 'peek-vanilla'` works in any JS environment
 
 ## Features
 
@@ -43,6 +44,29 @@ const svg2 = toSvg('Rem', {
   square: false,  // circular clip
 });
 ```
+
+### Live avatars (animation, no React)
+
+`mount()` is the vanilla replacement for React's `<Peek animate />` — same tree, same animation rig, straight DOM updates:
+
+```js
+import { mount } from 'peek-vanilla';
+
+const avatar = mount('Sakayori', '#avatar', {
+  animate: true,
+  expression: 'happy',
+  gaze: 'pointer', // eyes follow the cursor
+});
+
+// later:
+avatar.setExpression('surprised');
+avatar.setGaze([0.5, -0.2]);
+avatar.destroy(); // stop the loop, remove the SVG
+```
+
+`mount(name, target, options)` — `target` is an element or CSS selector. Options are the same as `toSvg`, plus `animate` (default `false`) and `className`. Returns `{ el, live, setExpression, setGaze, destroy }`. Respects `prefers-reduced-motion` (renders the static pose instead).
+
+For full control, `Live` is also exported: `new Live(svgElement, tree, who, opts, expression, gaze)` — pair it with `draw()` + `restPose()` from the same package.
 
 ### Options
 
