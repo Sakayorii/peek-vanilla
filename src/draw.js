@@ -8,7 +8,9 @@
  * so a live tree keeps the same nodes frame to frame. A static tree drops
  * what is invisible (opacity 0) to stay small.
  */
-import { ACCESSORY_INK, COLORS, EXPRESSIONS, FACES, INK, } from './tables.js';
+import { ACCESSORY_INK, BLOC, COLORS, EXPRESSIONS, FACES, HAZE, INK, WHEEL, } from './tables.js';
+import { fnv1a, mulberry32 } from './identity.js';
+import { blocParts } from './bloc.js';
 /* The frame: viewBox -30 -30 400 400, the floor on its bottom edge. */
 export const VB = [-30, -30, 400, 400];
 const FLOOR = 370;
@@ -18,7 +20,7 @@ export const smooth = (a, b, v) => {
     const t = clamp((v - a) / (b - a), 0, 1);
     return t * t * (3 - 2 * t);
 };
-const f2 = (v) => String(Math.round(v * 100) / 100);
+export const f2 = (v) => String(Math.round(v * 100) / 100);
 const f3 = (v) => String(Math.round(v * 1000) / 1000);
 const strokeFor = (px) => px >= 96 ? 1 : px >= 56 ? 1.25 : px >= 40 ? 1.6 : px >= 30 ? 2 : 2.4;
 const RAD = Math.PI / 180;
@@ -150,7 +152,7 @@ export function ringWalk(sh) {
     }
     return u > RING_U ? { rest: u + 20, min: u } : { rest: u, min: -Infinity };
 }
-function n(tag, key, attrs, children = []) {
+export function n(tag, key, attrs, children = []) {
     const out = {};
     for (const k in attrs) {
         const v = attrs[k];
@@ -167,6 +169,107 @@ function prune(node) {
     if (node.tag === 'g' && children.length === 0)
         return null;
     return { ...node, children };
+}
+
+/*
+ * Haze, from the Haze sheet: the body is its own ink plus three soft radial
+ * blobs, cut to the outline. A deep one at the bottom, a tint from a hue
+ * neighbor low on the outer edge, a glow at the top. Where they sit comes
+ * from the name, mulberry32(fnv1a('haze:' + key)), so two faces of one
+ * color haze apart.
+ * Blob sizes are in body widths; the light level, used below 32px, keeps
+ * the face nearly peek where the haze would only be mud.
+ */
+const HAZE_LEVEL = {
+    medium: {
+        deep: [0.502, 0.224],
+        glow: [0.749, 0.337],
+        tint: [0.4, 0.5],
+        tintStops: [
+            [0, 0.878],
+            [0.15, 0.878],
+            [0.618, 0.396],
+        ],
+    },
+    light: {
+        deep: [0.298, 0.133],
+        glow: [0.549, 0.247],
+        tint: [0.31, 0.387],
+        tintStops: [
+            [0, 0.549],
+            [0.55, 0.247],
+        ],
+    },
+};
+function hazePaint(who, o) {
+    const sh = FACES[who.face];
+    const id = o.id;
+    const L = HAZE_LEVEL[o.size < 32 ? 'light' : 'medium'];
+    // the body's box: the crown grown by its radius, down to the bottom
+    const xs = sh.crown.poly.map((p) => p[0]);
+    const ys = sh.crown.poly.map((p) => p[1]);
+    const x0 = Math.min(...xs) - sh.crown.r;
+    const y0 = Math.min(...ys) - sh.crown.r;
+    const W = Math.max(...xs) + sh.crown.r - x0;
+    const H = sh.bottom - y0;
+    // the sheet's own seed and draw order, fitted to its 12 names: never
+    // reorder these lines. The tint walks one track, low and out to high and in.
+    const rnd = mulberry32(fnv1a(`haze:${who.key ?? ''}`));
+    const warm = rnd() < 0.5;
+    const left = rnd() < 0.5;
+    const t = rnd();
+    const tintX = 0.04 + 0.174 * t;
+    const tintY = 0.649 + 0.202 * t;
+    const glowX = 0.38 - 0.12 * rnd();
+    const glowY = 0.12 + 0.099 * rnd();
+    const deepX = 0.251 - 0.151 * rnd();
+    const tintA = 90 - 180 * rnd();
+    const at = (inset, onLeft) => x0 + W * (onLeft ? inset : 1 - inset);
+    const i = WHEEL.indexOf(who.color);
+    const near = WHEEL[(i + (warm ? WHEEL.length - 1 : 1)) % WHEEL.length];
+    const { body, deep } = COLORS[who.color];
+    const blob = (k, color, [cx, cy, a, rx, ry], stops) => n('radialGradient', `haze.${k}`, {
+        id: `${id}-h${k[0]}`,
+        gradientUnits: 'userSpaceOnUse',
+        cx: 0,
+        cy: 0,
+        r: 1,
+        gradientTransform: `translate(${f2(cx)} ${f2(cy)}) rotate(${f2(a)}) scale(${f2(rx)} ${f2(ry)})`,
+    }, [...stops, [1, 0]].map(([off, op], j) => n('stop', `haze.${k}.${j}`, {
+        offset: off,
+        'stop-color': color,
+        'stop-opacity': op,
+    })));
+    const fade = ([a, b]) => [
+        [0, a],
+        [0.55, b],
+    ];
+    const blobs = [
+        blob('deep', deep, [at(deepX, !left), y0 + H * 0.95, 0, W * 0.5, W * 0.35], fade(L.deep)),
+        blob('tint', HAZE[near].tint, [at(tintX, left), y0 + H * tintY, tintA, W * L.tint[0], W * L.tint[1]], L.tintStops),
+        blob('glow', HAZE[who.color].glow, [at(glowX, !left), y0 + H * glowY, 0, W * 0.475, W * 0.356], fade(L.glow)),
+    ];
+    const shape = (key, paint) => 'd' in sh.body
+        ? n('path', key, {
+            d: sh.body.d,
+            fill: paint,
+            stroke: sh.body.stroke ? paint : undefined,
+            'stroke-width': sh.body.stroke,
+            'stroke-linejoin': sh.body.stroke ? 'round' : undefined,
+        })
+        : n('circle', key, {
+            cx: sh.body.circle[0],
+            cy: sh.body.circle[1],
+            r: sh.body.circle[2],
+            fill: paint,
+        });
+    return [
+        ...blobs,
+        n('g', 'haze', { id: `${id}-hz` }, [
+            shape('haze.body', body),
+            ...['deep', 'tint', 'glow'].map((k) => shape(`haze.${k}.fill`, `url(#${id}-h${k[0]})`)),
+        ]),
+    ];
 }
 export function draw(who, pose, o) {
     const sh = FACES[who.face];
@@ -280,7 +383,19 @@ export function draw(who, pose, o) {
     const B = sh.bottom;
     const ty = baseY - alt * R;
     const sc = (v) => Math.round(v * 100000) / 100000;
-    const bodyNode = 'd' in sh.body
+    const variant = o.variant ?? 'peek';
+    const haze = variant === 'haze';
+    let front;
+    let back;
+    if (variant === 'bloc') {
+        [front, back] = blocParts({ who, pose, o, defs, g });
+    }
+    else {
+    if (haze)
+        defs.push(...hazePaint(who, o));
+    const bodyNode = haze
+        ? n('use', 'body', { href: `#${id}-hz` })
+        : 'd' in sh.body
         ? n('path', 'body', {
             d: sh.body.d,
             fill,
@@ -375,25 +490,42 @@ export function draw(who, pose, o) {
         const lrx = rx * 1.55;
         const lry = ry * 1.15;
         const top = ry + 1.6 - lower * ry * 1.5;
+        // a bead has no white to show where it looks, so the whole eye leans
+        const [etx, ety] = bead
+            ? [ex + side * spread + gx * 6, ey + gy * 6]
+            : [ex + side * spread, ey];
+        const lids = [
+            n('rect', `${kk}.lid`, {
+                x: f2(-rx * 2.2),
+                y: f2(-ry * 3),
+                width: f2(rx * 4.4),
+                height: f2(Math.max(0, edge + ry * 3)),
+                transform: `rotate(${f2(a)})`,
+                fill,
+            }),
+            n('ellipse', `${kk}.lower`, {
+                cx: 0,
+                cy: f2(top + lry),
+                rx: f2(lrx),
+                ry: f2(lry),
+                fill,
+            }),
+        ];
+        // Haze: the lids cut the body's own paint, so they never read as patches
+        if (haze)
+            defs.push(n('clipPath', `${kk}.lidshape`, { id: `${id}-s${i}` }, lids));
         const parts = [
             n('g', `${kk}.inner`, { 'clip-path': `url(#${id}-e${i})` }, inner),
-            n('g', `${kk}.lids`, { 'clip-path': `url(#${id}-l${i})` }, [
-                n('rect', `${kk}.lid`, {
-                    x: f2(-rx * 2.2),
-                    y: f2(-ry * 3),
-                    width: f2(rx * 4.4),
-                    height: f2(Math.max(0, edge + ry * 3)),
-                    transform: `rotate(${f2(a)})`,
-                    fill,
-                }),
-                n('ellipse', `${kk}.lower`, {
-                    cx: 0,
-                    cy: f2(top + lry),
-                    rx: f2(lrx),
-                    ry: f2(lry),
-                    fill,
-                }),
-            ]),
+            n('g', `${kk}.lids`, { 'clip-path': `url(#${id}-l${i})` }, haze
+                ? [
+                    n('g', `${kk}.lidpaint`, { 'clip-path': `url(#${id}-s${i})` }, [
+                        n('use', `${kk}.lidbody`, {
+                            href: `#${id}-hz`,
+                            transform: `translate(${f2(-etx)} ${f2(-ety)})`,
+                        }),
+                    ]),
+                ]
+                : lids),
         ];
         // a rimmed eye inks its lid edges too, so the outline follows the lids
         if (who.eyes === 'ring')
@@ -430,10 +562,7 @@ export function draw(who, pose, o) {
             opacity: co > 0.01 ? f2(co) : 0,
         }));
         return n('g', kk, {
-            // a bead has no white to show where it looks, so the whole eye leans
-            transform: bead
-                ? `translate(${f2(ex + side * spread + gx * 6)} ${f2(ey + gy * 6)})`
-                : `translate(${f2(ex + side * spread)} ${ey})`,
+            transform: `translate(${f2(etx)} ${f2(ety)})`,
         }, parts);
     });
     // brows
@@ -861,6 +990,9 @@ export function draw(who, pose, o) {
         ),
       )
     }
+    front = [bodyNode, ...cheeks, trait];
+    back = [...eyes, ...brows, mouth, ...wardrobe];
+    }
     // the plates sit a hair out of register at large sizes
     const off = (dx, dy) => riso ? `translate(${f2(dx * k * upp)} ${f2(dy * k * upp)})` : undefined;
     const av = n('g', 'av', {
@@ -870,11 +1002,11 @@ export function draw(who, pose, o) {
         n('g', 'plateA', {
             transform: off(-0.55, 0.45),
             filter: riso ? `url(#${id}-pA)` : undefined,
-        }, [bodyNode, ...cheeks, trait]),
+        }, front),
         n('g', 'plateB', {
             transform: off(0.6, -0.5),
             filter: riso ? `url(#${id}-pB)` : undefined,
-        }, [...eyes, ...brows, mouth, ...wardrobe]),
+        }, back),
     ]);
     // the thing in the corner: a dot lattice from the mark's vocabulary
     const scene = [];

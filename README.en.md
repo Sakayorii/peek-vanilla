@@ -25,6 +25,7 @@ This port:
 ## Features
 
 - Accessories: dress a face with three independent slots, eyewear (glasses, sunglasses), headwear (bow, cap, sprout) and neckwear (tie), all defaulting to none
+- Drawing variants: peek is the default look, haze washes the body with three soft color blobs, bloc rebuilds the face from a square, a circle and a bar. All three variants read the same identity, so a name keeps its face, color and parts in every variant
 
 - 4 face styles, 7 colors, 11 expressions, 20,000+ combinations
 - Deterministic: same name → same avatar, every time
@@ -87,17 +88,21 @@ For full control, `Live` is also exported: `new Live(svgElement, tree, who, opts
 | `eyewear` | string | 'none' | glasses or sunglasses |
 | `headwear` | string | 'none' | bow, cap or sprout |
 | `neckwear` | string | 'none' | tie |
+| `variant` | string | 'peek' | How the face is drawn: peek, haze or bloc |
 | `gaze` | [x, y] |, | Eye direction, -1 to 1 |
 | `square` | boolean | true | false = circular clip |
 | `title` | string/false | name | Accessible name |
 
 ## Which upstream release is this?
 
-This release ports upstream @doan-labs/peek 1.1.0, including the accessories
-system. The npm version of this port is 1.2.0, because npm 1.1.0 was already
-taken by the previous release of this port, which was based on upstream 1.0.
-Faces without accessories render byte for byte as before, and the SVG id of a
-face without accessories is computed exactly as in the previous release.
+This release ports upstream @doan-labs/peek 2.0.0, including the accessories
+system from 1.1 and the drawing variants from 2.0 (haze and bloc; upstream's
+React, Vue and Svelte wrappers are out of scope for this port). The npm
+version of this port is 2.0.0, matching upstream. (The previous release of
+this port used 1.2.0 for the upstream 1.1 content, because npm 1.1.0 was
+already taken by an older release based on upstream 1.0.) Faces drawn with
+the peek variant render byte for byte as before, and the SVG id of a peek
+face without accessories is computed exactly as in earlier releases.
 
 ## License
 

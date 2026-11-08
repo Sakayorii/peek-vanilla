@@ -3,7 +3,7 @@
    or mount() it live with the full animation rig. */
 export { toSvg, settle, serialize } from './svg.js';
 export { identify, tidy, fnv1a, seed } from './identity.js';
-export { ACCESSORIES, ACCESSORY_INK, COLORS, EXPRESSIONS, FACES } from './tables.js';
+export { ACCESSORIES, ACCESSORY_INK, BLOC, COLORS, EXPRESSIONS, FACES, HAZE, VARIANTS, WHEEL } from './tables.js';
 export { draw } from './draw.js';
 export { Live } from './animate.js';
 export { mount } from './peek.js';

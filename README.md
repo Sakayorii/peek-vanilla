@@ -26,6 +26,7 @@ Bản port này:
 ## Tính năng
 
 - Phụ kiện: mặc cho khuôn mặt bằng ba slot độc lập, kính mắt (glasses, sunglasses), đồ đội đầu (bow, cap, sprout) và đồ đeo cổ (tie), tất cả mặc định là none
+- Biến thể vẽ (variant): peek là cách vẽ mặc định, haze phủ ba vệt màu mềm lên thân, bloc dựng lại khuôn mặt từ hình vuông, hình tròn và một thanh ngang. Cả ba biến thể đọc cùng một định danh, nên một tên giữ nguyên mặt, màu và các bộ phận trong mọi biến thể
 - 4 kiểu mặt, 7 màu, 11 biểu cảm, hơn 20.000 tổ hợp
 - Xác định: cùng một tên luôn cho cùng một avatar, mọi lúc
 - Mỗi avatar SVG khoảng 2.5 KB
@@ -54,6 +55,10 @@ const svg3 = toSvg('Rem', {
   headwear: 'sprout',
   neckwear: 'tie',
 });
+
+// Đổi cách vẽ: cùng một tên, ba diện mạo
+const svg4 = toSvg('Rem', { variant: 'haze' });
+const svg5 = toSvg('Rem', { variant: 'bloc' });
 ```
 
 ### Avatar sống (có animation, không cần React)
@@ -94,13 +99,14 @@ Muốn kiểm soát toàn bộ thì có sẵn `Live`: `new Live(svgElement, tree
 | `eyewear` | string | 'none' | glasses hoặc sunglasses |
 | `headwear` | string | 'none' | bow, cap hoặc sprout |
 | `neckwear` | string | 'none' | tie |
+| `variant` | string | 'peek' | Cách vẽ mặt: peek, haze hoặc bloc |
 | `gaze` | [x, y] | (không có) | Hướng nhìn của mắt, từ -1 đến 1 |
 | `square` | boolean | true | false = cắt hình tròn |
 | `title` | string/false | tên | Tên dùng cho trợ năng |
 
 ## Bản này port từ upstream phiên bản nào?
 
-Bản này port từ upstream @doan-labs/peek 1.1.0, bao gồm hệ thống phụ kiện. Số version trên npm của bản port là 1.2.0, vì npm 1.1.0 đã bị bản phát hành trước của chính bản port này dùng mất, và bản đó dựa trên upstream 1.0. Các khuôn mặt không có phụ kiện vẫn render giống hệt trước đây đến từng byte, và id SVG của khuôn mặt không có phụ kiện vẫn được tính đúng như bản phát hành trước.
+Bản này port từ upstream @doan-labs/peek 2.0.0, bao gồm hệ thống phụ kiện của bản 1.1 và các biến thể vẽ của bản 2.0 (haze và bloc; các lớp bọc React, Vue và Svelte của upstream không nằm trong phạm vi của bản port này). Số version trên npm của bản port là 2.0.0, khớp với upstream. (Bản phát hành trước của bản port dùng số 1.2.0 cho nội dung upstream 1.1, vì npm 1.1.0 đã bị một bản phát hành cũ hơn dựa trên upstream 1.0 dùng mất.) Các khuôn mặt dùng biến thể peek vẫn render giống hệt trước đây đến từng byte, và id SVG của khuôn mặt peek không có phụ kiện vẫn được tính đúng như các bản phát hành trước.
 
 ## Giấy phép
 

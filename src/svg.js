@@ -4,7 +4,7 @@
  */
 import { draw, restPose, } from './draw.js';
 import { fnv1a, identify } from './identity.js';
-import { ACCESSORIES } from './tables.js';
+import { ACCESSORIES, VARIANTS } from './tables.js';
 /**
  * A name decides identity unless the caller overrides an axis: an explicit
  * face, color or part wins over the hash, and every other axis stays put.
@@ -27,12 +27,16 @@ export function settle(name, o, live = false) {
         neckwear: wear(o, base, 'neckwear'),
     };
     const pose = restPose(who, o.expression ?? 'normal', o.gaze);
+    // an unknown variant from untyped callers draws peek
+    const variant = VARIANTS.includes(o.variant) ? o.variant : 'peek';
     const look = {
         size: o.size ?? 64,
         frame: o.frame ?? 'ink',
         square: o.square ?? true,
         riso: o.riso ?? false,
         live,
+        // left out for peek, so its ids and bytes stay as they were
+        ...(variant !== 'peek' && { variant }),
     };
     // Keep the byte-level peek@1 contract for faces without accessories.
     const { eyewear, headwear, neckwear, ...legacy } = who;
