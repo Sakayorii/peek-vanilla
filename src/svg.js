@@ -4,10 +4,13 @@
  */
 import { draw, restPose, } from './draw.js';
 import { fnv1a, identify } from './identity.js';
+import { ACCESSORIES } from './tables.js';
 /**
  * A name decides identity unless the caller overrides an axis: an explicit
  * face, color or part wins over the hash, and every other axis stays put.
  */
+// an unknown item from untyped callers keeps what the name picked
+const wear = (o, base, s) => ACCESSORIES[s].includes(o[s]) ? o[s] : base[s];
 export function settle(name, o, live = false) {
     const base = identify(name, { version: o.version });
     const who = {
@@ -19,6 +22,9 @@ export function settle(name, o, live = false) {
         mouth: o.mouth ?? base.mouth,
         cheeks: o.cheeks ?? base.cheeks,
         trait: o.trait ?? base.trait,
+        eyewear: wear(o, base, 'eyewear'),
+        headwear: wear(o, base, 'headwear'),
+        neckwear: wear(o, base, 'neckwear'),
     };
     const pose = restPose(who, o.expression ?? 'normal', o.gaze);
     const look = {
@@ -28,7 +34,10 @@ export function settle(name, o, live = false) {
         riso: o.riso ?? false,
         live,
     };
-    const id = o.id ?? `peek-${fnv1a(JSON.stringify([who, pose, look])).toString(36)}`;
+    // Keep the byte-level peek@1 contract for faces without accessories.
+    const { eyewear, headwear, neckwear, ...legacy } = who;
+    const wardrobe = eyewear !== 'none' || headwear !== 'none' || neckwear !== 'none';
+    const id = o.id ?? `peek-${fnv1a(JSON.stringify([wardrobe ? who : legacy, pose, look])).toString(36)}`;
     return { who, pose, opts: { ...look, id, title: o.title ?? name } };
 }
 // characters XML 1.0 cannot hold at all: C0 controls and lone surrogates

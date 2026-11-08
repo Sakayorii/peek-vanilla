@@ -140,9 +140,17 @@ export const PARTS = {
     cheeks: ['oval', 'dots', 'lines'],
     trait: ['square', 'fin', 'ring', 'dot', 'peak'],
 };
+// The bow's single warm accent, transcribed from the accessory sheet.
+export const ACCESSORY_INK = { knot: '#E5412D' };
+/** Independent wardrobe slots. peek@1 picks none; callers can dress it. */
+export const ACCESSORIES = {
+    eyewear: ['none', 'glasses', 'sunglasses'],
+    headwear: ['none', 'bow', 'cap', 'sprout'],
+    neckwear: ['none', 'tie'],
+};
 /** How much of each list a version may pick from. Append-only too. */
 export const VERSIONS = {
-    1: { face: 4, color: 7, eyes: 3, brows: 4, mouth: 4, cheeks: 3, trait: 5 },
+    1: { face: 4, color: 7, eyes: 3, brows: 4, mouth: 4, cheeks: 3, trait: 5, eyewear: 1, headwear: 1, neckwear: 1 },
 };
 export const LATEST = 1;
 /* ---------- state: channels and the 11 expressions ---------- */

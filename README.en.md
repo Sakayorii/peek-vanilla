@@ -1,0 +1,104 @@
+[Tiếng Việt](README.md) | **English**
+
+# peek-vanilla
+
+Vanilla JS port of [Peek](https://github.com/doan-labs/peek) by Doan Labs, generate avatars from names, no React, no build step, no database.
+
+A string in, a face out.
+
+## Credit
+
+All avatar generation logic is ported from [@doan-labs/peek](https://github.com/doan-labs/peek) (MIT License, © 2026 Doan Labs). This repo strips the React wrapper and TypeScript types, leaving pure JavaScript that runs anywhere.
+
+Original: https://peek.doan-labs.com/
+
+## Why this port?
+
+The original Peek is a React component. That's fine for React apps, but many sites (like static Astro sites) don't use React, and adding react + react-dom plus a JSX build step just to render avatars is framework overhead for what is really a pure function: name in, SVG out. (Tellingly, the original's own animation loop already bypasses React entirely, "React never hears about a frame.")
+
+This port:
+- **Zero dependencies**, pure JS, no React, no build step
+- **Same output**, byte-identical SVGs to the original for the same inputs
+- **Same animation**, the full animation rig (springs, blinks, saccades, breathing, per-expression choreography) ported 1:1; the original's own animation code never touched React in the first place
+- **Drop-in**, `import { toSvg, mount } from 'peek-vanilla'` works in any JS environment
+
+## Features
+
+- Accessories: dress a face with three independent slots, eyewear (glasses, sunglasses), headwear (bow, cap, sprout) and neckwear (tie), all defaulting to none
+
+- 4 face styles, 7 colors, 11 expressions, 20,000+ combinations
+- Deterministic: same name → same avatar, every time
+- ~2.5KB SVG output per avatar
+- Customizable: override face, color, eyes, brows, mouth, cheeks, expression, gaze
+- No database, no network requests, no runtime dependencies
+
+## Usage
+
+```js
+import { toSvg } from 'peek-vanilla';
+
+// Basic: name in, SVG out
+const svg = toSvg('Sakayori');
+document.getElementById('avatar').innerHTML = svg;
+
+// With options
+const svg2 = toSvg('Rem', {
+  size: 128,
+  expression: 'happy',
+  square: false,  // circular clip
+});
+```
+
+### Live avatars (animation, no React)
+
+`mount()` is the vanilla replacement for React's `<Peek animate />`, same tree, same animation rig, straight DOM updates:
+
+```js
+import { mount } from 'peek-vanilla';
+
+const avatar = mount('Sakayori', '#avatar', {
+  animate: true,
+  expression: 'happy',
+  gaze: 'pointer', // eyes follow the cursor
+});
+
+// later:
+avatar.setExpression('surprised');
+avatar.setGaze([0.5, -0.2]);
+avatar.destroy(); // stop the loop, remove the SVG
+```
+
+`mount(name, target, options)`, `target` is an element or CSS selector. Options are the same as `toSvg`, plus `animate` (default `false`) and `className`. Returns `{ el, live, setExpression, setGaze, destroy }`. Respects `prefers-reduced-motion` (renders the static pose instead).
+
+For full control, `Live` is also exported: `new Live(svgElement, tree, who, opts, expression, gaze)`, pair it with `draw()` + `restPose()` from the same package.
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `size` | number | 64 | Pixel size (drives stroke thickness) |
+| `expression` | string | 'normal' | happy, sad, angry, surprised, etc. |
+| `face` | string | (from name) | Override face style |
+| `color` | string | (from name) | Override color |
+| `eyes` | string | (from name) | Override eyes |
+| `brows` | string | (from name) | Override brows |
+| `mouth` | string | (from name) | Override mouth |
+| `cheeks` | string | (from name) | Override cheeks |
+| `eyewear` | string | 'none' | glasses or sunglasses |
+| `headwear` | string | 'none' | bow, cap or sprout |
+| `neckwear` | string | 'none' | tie |
+| `gaze` | [x, y] |, | Eye direction, -1 to 1 |
+| `square` | boolean | true | false = circular clip |
+| `title` | string/false | name | Accessible name |
+
+## Which upstream release is this?
+
+This release ports upstream @doan-labs/peek 1.1.0, including the accessories
+system. The npm version of this port is 1.2.0, because npm 1.1.0 was already
+taken by the previous release of this port, which was based on upstream 1.0.
+Faces without accessories render byte for byte as before, and the SVG id of a
+face without accessories is computed exactly as in the previous release.
+
+## License
+
+MIT, same as the original. See LICENSE file.
